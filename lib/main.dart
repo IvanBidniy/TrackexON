@@ -1,70 +1,57 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:trackex/pages/Splash.dart';
-import 'package:trackex/providers/UserProvider.dart';
-import 'package:trackex/theme/colors.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.dark,
-    // systemNavigationBarColor: Colors.transparent
-  ));
-
-  await Firebase.initializeApp();
+  await Firebase.initializeApp();  // Ініціалізація Firebase
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (context) => UserProvider(),
-        ),
-      ],
-      child: MaterialApp(
-        title: 'Trackex',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-            // This is the theme of your application.
-            //
-            // Try running your application with "flutter run". You'll see the
-            // application has a blue toolbar. Then, without quitting the app, try
-            // changing the primarySwatch below to Colors.green and then invoke
-            // "hot reload" (press "r" in the console where you ran "flutter run",
-            // or simply save your changes to "hot reload" in a Flutter IDE).
-            // Notice that the counter didn't reset back to zero; the application
-            // is not restarted.
-            primarySwatch: MaterialColor(0xFF2C3137, {
-              50: Color(0xFF2C3137),
-              100: Color(0xFF2C3137),
-              200: Color(0xFF2C3137),
-              300: Color(0xFF2C3137),
-              400: Color(0xFF2C3137),
-              500: Color(0xFF2C3137),
-              600: Color(0xFF2C3137),
-              700: Color(0xFF2C3137),
-              800: Color(0xFF2C3137),
-              900: Color(0xFF2C3137)
-            }),
-            appBarTheme: AppBarTheme(
-                brightness: Brightness.light,
-                backgroundColor: white,
-                elevation: 0),
+    return MaterialApp(
+      title: 'Expense Tracker',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: ExpenseList(),
+    );
+  }
+}
 
-            // This makes the visual density adapt to the platform that you run
-            // the app on. For desktop platforms, the controls will be smaller and
-            // closer together (more dense) than on mobile platforms.
-            visualDensity: VisualDensity.adaptivePlatformDensity,
-            backgroundColor: white),
-        home: SplashScreen(),
+class ExpenseList extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Expense Tracker')),
+      body: FutureBuilder<QuerySnapshot>(
+        future: FirebaseFirestore.instance.collection('expenses').get(),  // Отримання витрат з Firestore
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Something went wrong'));
+          }
+          final expenses = snapshot.data!.docs;
+          return ListView.builder(
+            itemCount: expenses.length,
+            itemBuilder: (context, index) {
+              final expense = expenses[index];
+              final amount = expense['amount'];
+              final category = expense['category'];
+              final date = expense['date'].toDate();
+              return ListTile(
+                title: Text('$category: \$${amount.toString()}'),
+                subtitle: Text('Date: ${date.toLocal()}'),
+              );
+            },
+          );
+        },
       ),
     );
   }
 }
+
